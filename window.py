@@ -61,7 +61,9 @@ def buscararquivo():
 
     caminho = getattr(planilha, "name")
     text_caminhoarquivo.delete(0, END)
+    text_caminhoarquivo.configure(state='normal')
     text_caminhoarquivo.insert(0, caminho)
+    text_caminhoarquivo.configure(state='disabled')
 
 
 def deletarestrutura():
@@ -75,7 +77,9 @@ def deletarestrutura():
                 deletartabela(nome)
                 messagebox.showinfo(title="Sucesso",
                                     message=f"Dados da tabela {nome} deletados. \n{qtd} registros deletados.")
+                text_status.configure(state='normal')
                 text_status.insert("1.0", f"Foram deletados {qtd} registros da tabela {nome}.\n")
+                text_status.configure(state='disabled')
             else:
                 messagebox.showwarning(title="Aviso", message=f"Não existe dados na tabela {nome}.")
     except:
@@ -88,31 +92,37 @@ def insertdepto():
     apos faz o tratamento dos dados e insere as informações no banco de dados.'''
     count = 0
     cursorbanco = cursor()
-    consulta = consultaqtddados('DEPTO')
-    if consulta <= 0:
-        try:
-            arquivo = text_caminhoarquivo.get()
-            depto_df = lerexcel(arquivo, 'DEPARTAMENTOS')
+    try:
+        consulta = consultaqtddados('DEPTO')
+        if consulta <= 0:
+            try:
+                arquivo = text_caminhoarquivo.get()
+                depto_df = lerexcel(arquivo, 'DEPARTAMENTOS')
 
-            for i, codigo in enumerate(depto_df['CODIGO']):
-                depto = depto_df.loc[i, 'DEPARTAMENTO'].replace("'", "").strip().upper()
+                for i, codigo in enumerate(depto_df['CODIGO']):
+                    depto = depto_df.loc[i, 'DEPARTAMENTO'].replace("'", "").strip().upper()
 
-                df_dados = str(codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
-                    codigo) + ')'
-                query = scriptDepto + df_dados
-                count += 1
-                cursorbanco.execute(query)
-                cursorbanco.commit()
-                text_status.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
+                    df_dados = str(codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
+                        codigo) + ')'
+                    query = scriptDepto + df_dados
+                    count += 1
+                    cursorbanco.execute(query)
+                    cursorbanco.commit()
+                    text_status.configure(state='normal')
+                    text_status.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
 
-            text_status.insert("1.0",
-                               f"Foram inseridos {count} departamentos.\n==========================================================\n")
-        except FileNotFoundError:
-            messagebox.showerror(title="Falta de dados para o comando",
-                                 message="Validar conexão e arquivo selecionados.")
-    else:
-        messagebox.showwarning(title="Aviso",
+                text_status.insert("1.0",
+                                   f"Foram inseridos {count} departamentos.\n==========================================================\n")
+                text_status.configure(state='disabled')
+            except FileNotFoundError:
+                messagebox.showerror(title="Falta de dados para o comando",
+                                     message="Arquivo Excel não foi encontrado.")
+        else:
+            messagebox.showwarning(title="Aviso",
                                message=f"Necessário excluir os dados antes da inserção de valores.")
+    except:
+        messagebox.showerror(title="Falta de dados para o comando",
+                             message="Validar conexão com o banco de dados.")
 
 
 def insertgrupo():
@@ -135,10 +145,13 @@ def insertgrupo():
             count += 1
             cursorbanco.execute(query)
             cursorbanco.commit()
+            text_status.configure(state='normal')
             text_status.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
 
         text_status.insert("1.0",
                            f"Foram inseridos {count} grupos.\n==========================================================\n")
+        text_status.configure(state='disabled')
+
     except FileNotFoundError:
         messagebox.showerror(title="Falta de dados para o comando",
                              message="Validar conexão e arquivo selecionados.")
@@ -166,11 +179,13 @@ def insertsubg():
             count += 1
             cursorbanco.execute(query)
             cursorbanco.commit()
-
+            text_status.configure(state='normal')
             text_status.insert("1.0", f"SubGrupo {subgrupo} inserindo com sucesso.\n")
 
         text_status.insert("1.0",
                            f"Foram inseridos {count} subgrupos.\n==========================================================\n")
+        text_status.configure(state='disabled')
+
     except FileNotFoundError:
         messagebox.showerror(title="Falta de dados para o comando",
                              message="Validar conexão e arquivo selecionados.")
@@ -190,10 +205,12 @@ def ajustproduto():
             count += 1
             cursorbanco.execute(script)
             cursorbanco.commit()
-
+            text_status.configure(state='normal')
             text_status.insert('1.0', f'Produto {produto} alterado para subgrupo de codigo {cod_subg}.\n')
         text_status.insert('1.0',
                            f'Foram alterados {count} produtos.\n==========================================================\n')
+        text_status.configure(state='disabled')
+
     except FileNotFoundError:
         messagebox.showerror(title="Falta de dados para o comando",
                              message="Validar conexão e arquivo selecionados.")
@@ -226,7 +243,8 @@ entry0_bg = canvas.create_image(
 text_caminhoarquivo = Entry(
     bd=0,
     bg="#ffffff",
-    highlightthickness=0)
+    highlightthickness=0,
+    state='disabled')
 
 text_caminhoarquivo.place(
     x=30, y=209,
@@ -362,7 +380,8 @@ entry3_bg = canvas.create_image(
 text_status = scrolledtext.ScrolledText(
     bd=0,
     bg="#ffffff",
-    highlightthickness=0)
+    highlightthickness=0,
+    state='disabled')
 
 text_status.place(
     x=30, y=458,
