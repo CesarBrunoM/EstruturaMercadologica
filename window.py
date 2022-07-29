@@ -2,10 +2,9 @@ from tkinter import *
 from tkinter import messagebox, scrolledtext
 from df_excel import ArquivoExcel
 from conexaoBD import ConexaoBanco
-import pandas as pd
 
 
-def bdconexao():
+def btntestarconexao():
     '''Criar o cursor para acesso ao banco de dados utilizando os parametros passados pelo usuario.'''
     banco = text_nomebanco.get()
     server = text_nomeserver.get()
@@ -13,16 +12,30 @@ def bdconexao():
     con.testarconexao()
 
 
-def mostrarcaminho():
+def btnbuscaarquivo():
     text_caminhoarquivo.configure(state='normal')
     text_caminhoarquivo.delete(0, END)
-    ArquivoExcel(text_caminhoarquivo)
+    ArquivoExcel().buscararquivo(text_caminhoarquivo)
     text_caminhoarquivo.configure(state='disabled')
 
 
-def deletardeptos():
+def btndeletarestrutura():
+    banco = text_nomebanco.get()
+    server = text_nomeserver.get()
     text_status.configure(state='normal')
-    ConexaoBanco.deletarestrutura(text_status)
+    ConexaoBanco(server, banco).deletarestrutura(text_status)
+    text_status.insert("1.0",
+                       "Processo de exclusão concluido.\n==========================================================\n")
+    text_status.configure(state='disabled')
+
+
+def btninserirdepto():
+    banco = text_nomebanco.get()
+    server = text_nomeserver.get()
+    arquivo = text_caminhoarquivo.get()
+    dataframe = ArquivoExcel().lerexcel(arquivo, 'DEPARTAMENTOS')
+    text_status.configure(state='normal')
+    ConexaoBanco(server, banco).insertdepto(dataframe, codloja=1, textstatus=text_status)
     text_status.configure(state='disabled')
 
 
@@ -96,7 +109,7 @@ btn_teste = Button(
     image=img0,
     borderwidth=0,
     highlightthickness=0,
-    command=bdconexao,
+    command=btntestarconexao,
     relief="flat")
 
 btn_teste.place(
@@ -109,7 +122,7 @@ btn_deletar = Button(
     image=img1,
     borderwidth=0,
     highlightthickness=0,
-    command=ConexaoBanco.deletarestrutura,
+    command=btndeletarestrutura,
     relief="flat")
 
 btn_deletar.place(
@@ -122,7 +135,7 @@ btn_insertdepto = Button(
     image=img2,
     borderwidth=0,
     highlightthickness=0,
-    command=ConexaoBanco.insertdepto,
+    command=btninserirdepto,
     relief="flat")
 
 btn_insertdepto.place(
@@ -174,7 +187,7 @@ btn_buscaarquivo = Button(
     image=img6,
     borderwidth=0,
     highlightthickness=0,
-    command=mostrarcaminho,
+    command=btnbuscaarquivo,
     relief="flat")
 
 btn_buscaarquivo.place(

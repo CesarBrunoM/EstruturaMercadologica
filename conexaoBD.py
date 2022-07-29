@@ -21,8 +21,9 @@ class ConexaoBanco(object):
         try:
             cursor = self._banco.cursor()
             cursor.execute(scriptsql)
-            cursor.commit()
-        except ConnectionRefusedError:
+            cursor.close()
+            self._banco.commit()
+        except ConnectionError:
             return False
         return True
 
@@ -32,7 +33,7 @@ class ConexaoBanco(object):
             cursor = self._banco.cursor()
             cursor.execute(scriptsql)
             dados = cursor.fetchall()
-        except ConnectionRefusedError:
+        except ConnectionError:
             return None
         return dados
 
@@ -40,78 +41,65 @@ class ConexaoBanco(object):
         self._banco.close()
 
     def consultaqtddados(self, nometabela):
-        '''Realiza uma consulta no banco de dados com o parametro NOMETABELA retornando a quantidade de registros na tabela'''
+        '''Realiza uma consulta no banco de dados com o parametro NOMETABELA retornando a
+        quantidade de registros na tabela'''
         script = f'SELECT * FROM {nometabela}'
         dados = self.consultarbd(script)
-        self.fecharbd()
         dados = pd.DataFrame(dados)
         qtd = len(dados.index)
         return qtd
 
     def testarconexao(self):
         '''Testa a conexão do banco de dados utilizando a função CURSOR()'''
-        try:
-            script = "SELECT DB_NAME();"
-            bd = self.consultarbd(script)
-            bdtupla = bd[0][0]
-            messagebox.showinfo(title="Teste conexão", message=f"Conectado ao banco de dados {bdtupla}.")
-        except ConnectionRefusedError:
-            messagebox.showerror(title="Teste conexão", message="Falha na conexão com o banco de dados.")
+        script = "SELECT DB_NAME();"
+        bd = self.consultarbd(script)
+        bdtupla = bd[0][0]
+        messagebox.showinfo(title="Teste conexão", message=f"Conectado ao banco de dados {bdtupla}.")
 
-    def deletarestrutura(self):
+    def deletarestrutura(self, textstatus):
         '''Deleta as tabelas de departamentos, grupos e subgrupos do banco de dados'''
-        self.nometabela = ['SUB_GRUPOS', 'GRUPOS', 'DEPTO']
-        self.script = f'DELETE FROM '
-        try:
-            for nome in self.nometabela:
-                qtd = self.consultaqtddados(nome)
-                if qtd > 0:
-                    self.manipularbd(self.script + nome)
-                    messagebox.showinfo(title="Sucesso",
-                                        message=f"Dados da tabela {nome} deletados. \n{qtd} registros deletados.")
-                else:
-                    messagebox.showwarning(title="Aviso", message=f"Não existe dados na tabela {nome}.")
-        except:
-            messagebox.showerror(title="Erro na conexão",
-                                 message="Não foi possivel acessar o banco de dados, verifique as informações de conexão.")
+        nometabela = ['SUB_GRUPOS', 'GRUPOS', 'DEPTO']
+        script = f'DELETE FROM '
+        for nome in nometabela:
+            qtd = self.consultaqtddados(nome)
+            if qtd > 0:
+                self.manipularbd(script + nome)
+                messagebox.showinfo(title="Sucesso",
+                                    message=f"Dados da tabela {nome} deletados. \n{qtd} registros deletados.")
+                textstatus.insert("1.0",
+                                  f'foram deletados {qtd} registros da tabela {nome}.'
+                                  f'\n==========================================================\n')
+            else:
+                messagebox.showwarning(title="Aviso", message=f"Não existe dados na tabela {nome}.")
+                textstatus.insert("1.0",
+                                  f'Nenhuma exclusão necessária na tabela {nome}.'
+                                  f'\n==========================================================\n')
 
-    def insertdepto():
+    def insertdepto(self, depto_df, codloja, textstatus):
         '''Realiza a leitura do arquivo excel buscando a aba DEPTO,
         apos faz o tratamento dos dados e insere as informações no banco de dados.'''
         count = 0
-        cursorbanco = cursor()
-        try:
-            consulta = consultaqtddados('DEPTO')
-            if consulta <= 0:
-                try:
-                    arquivo = text_caminhoarquivo.get()
-                    depto_df = lerexcel(arquivo, 'DEPARTAMENTOS')
+        scriptdepto = '''Insert into DEPTO (CODIGO, NOME, DATA,CODLOJA, SEQUENCIA) VALUES ('''
+        consulta = self.consultaqtddados('DEPTO')
 
-                    for i, codigo in enumerate(depto_df['CODIGO']):
-                        depto = depto_df.loc[i, 'DEPARTAMENTO'].replace("'", "").strip().upper()
+        if consulta == 0:
+            for i, codigo in enumerate(depto_df['CODIGO']):
+                depto = depto_df.loc[i, 'DEPARTAMENTO'].replace("'", "").strip().upper()
 
-                        df_dados = str(
-                            codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
-                            codigo) + ')'
-                        query = scriptDepto + df_dados
-                        count += 1
-                        cursorbanco.execute(query)
-                        cursorbanco.commit()
-                        text_status.configure(state='normal')
-                        text_status.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
+                df_dados = str(
+                    codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
+                    codigo) + ')'
+                script = scriptdepto + df_dados
+                count += 1
+                self.manipularbd(script)
+                textstatus.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
 
-                    text_status.insert("1.0",
-                                       f"Foram inseridos {count} departamentos.\n==========================================================\n")
-                    text_status.configure(state='disabled')
-                except FileNotFoundError:
-                    messagebox.showerror(title="Falta de dados para o comando",
-                                         message="Arquivo Excel não foi encontrado.")
-            else:
-                messagebox.showwarning(title="Aviso",
-                                       message=f"Necessário excluir os dados antes da inserção de valores.")
-        except:
-            messagebox.showerror(title="Falta de dados para o comando",
-                                 message="Validar conexão com o banco de dados.")
+            textstatus.insert("1.0",
+                              f"Foram inseridos {count} departamentos."
+                              f"\n==========================================================\n")
+        elif consulta > 0:
+            messagebox.showwarning(title="Aviso",
+                                   message=f"Necessário excluir os dados antes da inserção de valores.")
 
     def insertgrupo():
         '''Realiza a leitura do arquivo excel buscando a aba GRUPO,
@@ -138,7 +126,8 @@ class ConexaoBanco(object):
                 text_status.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
 
             text_status.insert("1.0",
-                               f"Foram inseridos {count} grupos.\n==========================================================\n")
+                               f"Foram inseridos {count} grupos."
+                               f"\n==========================================================\n")
             text_status.configure(state='disabled')
 
         except FileNotFoundError:
@@ -203,6 +192,5 @@ class ConexaoBanco(object):
                                  message="Validar conexão e arquivo selecionados.")
 
 
-scriptDepto = '''Insert into DEPTO (CODIGO, NOME, DATA,CODLOJA, SEQUENCIA) VALUES ('''
 scriptGrupo = '''Insert into GRUPOS (CODIGO, NOME, CODDEP, DATA, CODLOJA, SEQUENCIA) VALUES ('''
 scriptSubg = '''Insert into SUB_GRUPOS (CODIGO, CODLOJA, NOME, CODGRU, DATA, SEQUENCIA) VALUES ('''
