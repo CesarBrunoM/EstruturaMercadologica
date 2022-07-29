@@ -1,219 +1,29 @@
 from tkinter import *
-from tkinter import messagebox, scrolledtext, filedialog
-import pyodbc
-from df_excel import lerexcel
-from conexaoBD import conectar, scriptDepto, scriptGrupo, scriptSubg
+from tkinter import messagebox, scrolledtext
+from df_excel import ArquivoExcel
+from conexaoBD import ConexaoBanco
 import pandas as pd
 
-codloja = 1
 
-
-def cursor():
+def bdconexao():
     '''Criar o cursor para acesso ao banco de dados utilizando os parametros passados pelo usuario.'''
-    nome_servidor = text_nomeserver.get()
-    banco_dados = text_nomebanco.get()
-
-    conexao_bd = conectar(nome_servidor, banco_dados)
-
-    conexao = pyodbc.connect(conexao_bd)
-    cursor_bd = conexao.cursor()
-    return cursor_bd
+    banco = text_nomebanco.get()
+    server = text_nomeserver.get()
+    con = ConexaoBanco(server, banco)
+    con.testarconexao()
 
 
-def consultaqtddados(nometabela):
-    '''Realiza uma consulta no banco de dados com o parametro NOMETABELA retornando a quantidade de registros na tabela'''
-    # MELHORAR METODO PARA SABER QUANTOS REGISTROS EXISTEM NA TABELA COM PANDAS
-    cursorbanco = cursor()
-    cursorbanco.execute(f'SELECT * FROM {nometabela}')
-    dados = cursorbanco.fetchall()
-    dados = pd.DataFrame(dados)
-    qtd = len(dados.index)
-    return qtd
-
-
-def deletartabela(nometabela):
-    '''Deleta dados da tabela passada pelo parametro NOMETABELA.'''
-    cursorbanco = cursor()
-
-    cursorbanco.execute(f'DELETE FROM DBO.{nometabela}')
-    cursorbanco.commit()
-
-
-def testarconexao():
-    '''Testa a conexão do banco de dados utilizando a função CURSOR()'''
-    try:
-        cursorbanco = cursor()
-
-        cursorbanco.execute("SELECT DB_NAME();")
-        bd = cursorbanco.fetchall()
-        bdtupla = bd[0][0]
-        messagebox.showinfo(title="Teste conexão", message=f"Conectado ao banco de dados {bdtupla}.")
-    except:
-        messagebox.showerror(title="Teste conexão", message="Falha na conexão com o banco de dados.")
-
-
-def buscararquivo():
-    '''Busca o arquivo excel no sistema.
-    filetypes=(("Arquivo csv", ".csv"), ("Arquivo xlsx", ".xlsx"), ("Arquivo xls", ".xls"))'''
-    planilha = filedialog.askopenfile(mode='r', title="Selecione o arquivo com a departamentalização",
-                                      filetypes=(
-                                          ("Arquivo xlsx", ".xlsx"), ("Arquivo xls", ".xls")))
-
-    caminho = getattr(planilha, "name")
-    text_caminhoarquivo.delete(0, END)
+def mostrarcaminho():
     text_caminhoarquivo.configure(state='normal')
-    text_caminhoarquivo.insert(0, caminho)
+    text_caminhoarquivo.delete(0, END)
+    ArquivoExcel(text_caminhoarquivo)
     text_caminhoarquivo.configure(state='disabled')
 
 
-def deletarestrutura():
-    '''Deleta as tabelas de departamentos, grupos e subgrupos do banco de dados'''
-    nometabela = ['SUB_GRUPOS', 'GRUPOS', 'DEPTO']
-
-    try:
-        for nome in nometabela:
-            qtd = consultaqtddados(nome)
-            if qtd > 0:
-                deletartabela(nome)
-                messagebox.showinfo(title="Sucesso",
-                                    message=f"Dados da tabela {nome} deletados. \n{qtd} registros deletados.")
-                text_status.configure(state='normal')
-                text_status.insert("1.0", f"Foram deletados {qtd} registros da tabela {nome}.\n")
-                text_status.configure(state='disabled')
-            else:
-                messagebox.showwarning(title="Aviso", message=f"Não existe dados na tabela {nome}.")
-    except:
-        messagebox.showerror(title="Erro na conexão",
-                             message="Não foi possivel acessar o banco de dados, verifique as informações de conexão.")
-
-
-def insertdepto():
-    '''Realiza a leitura do arquivo excel buscando a aba DEPTO,
-    apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-    count = 0
-    cursorbanco = cursor()
-    try:
-        consulta = consultaqtddados('DEPTO')
-        if consulta <= 0:
-            try:
-                arquivo = text_caminhoarquivo.get()
-                depto_df = lerexcel(arquivo, 'DEPARTAMENTOS')
-
-                for i, codigo in enumerate(depto_df['CODIGO']):
-                    depto = depto_df.loc[i, 'DEPARTAMENTO'].replace("'", "").strip().upper()
-
-                    df_dados = str(codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
-                        codigo) + ')'
-                    query = scriptDepto + df_dados
-                    count += 1
-                    cursorbanco.execute(query)
-                    cursorbanco.commit()
-                    text_status.configure(state='normal')
-                    text_status.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
-
-                text_status.insert("1.0",
-                                   f"Foram inseridos {count} departamentos.\n==========================================================\n")
-                text_status.configure(state='disabled')
-            except FileNotFoundError:
-                messagebox.showerror(title="Falta de dados para o comando",
-                                     message="Arquivo Excel não foi encontrado.")
-        else:
-            messagebox.showwarning(title="Aviso",
-                               message=f"Necessário excluir os dados antes da inserção de valores.")
-    except:
-        messagebox.showerror(title="Falta de dados para o comando",
-                             message="Validar conexão com o banco de dados.")
-
-
-def insertgrupo():
-    '''Realiza a leitura do arquivo excel buscando a aba GRUPO,
-    apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-    count = 0
-    cursorbanco = cursor()
-
-    try:
-        arquivo = text_caminhoarquivo.get()
-        grupo_df = lerexcel(arquivo, 'GRUPOS')
-
-        for i, codigo in enumerate(grupo_df['CODIGO']):
-            grupo = grupo_df.loc[i, 'GRUPO'].replace("'", "").strip().upper()
-            coddep = grupo_df.loc[i, 'COD_DEPARTAMENTO']
-
-            datagrup = str(codigo) + ', \'' + grupo + '\', ' + str(coddep) + ', GETDATE(), ' + f' {codloja}, ' + str(
-                codigo) + ')'
-            query = scriptGrupo + datagrup
-            count += 1
-            cursorbanco.execute(query)
-            cursorbanco.commit()
-            text_status.configure(state='normal')
-            text_status.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
-
-        text_status.insert("1.0",
-                           f"Foram inseridos {count} grupos.\n==========================================================\n")
-        text_status.configure(state='disabled')
-
-    except FileNotFoundError:
-        messagebox.showerror(title="Falta de dados para o comando",
-                             message="Validar conexão e arquivo selecionados.")
-
-
-def insertsubg():
-    '''Realiza a leitura do arquivo excel buscando a aba SUBG,
-    apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-    count = 0
-    cursorbanco = cursor()
-
-    try:
-        arquivo = text_caminhoarquivo.get()
-        subg_df = lerexcel(arquivo, 'SUB_GRUPOS')
-
-        for i, codigo in enumerate(subg_df['CODIGO']):
-            subgrupo = subg_df.loc[i, 'SUBGRUPO'].replace("'", "").strip().upper()
-            codgrup = subg_df.loc[i, 'COD_GRUPO']
-
-            datasubg = str(codigo) + f', {codloja}, ' + '\'' + subgrupo + '\', ' + str(
-                codgrup) + ', ' + ' GETDATE(), ' + str(
-                codigo) + ')'
-
-            query = scriptSubg + datasubg
-            count += 1
-            cursorbanco.execute(query)
-            cursorbanco.commit()
-            text_status.configure(state='normal')
-            text_status.insert("1.0", f"SubGrupo {subgrupo} inserindo com sucesso.\n")
-
-        text_status.insert("1.0",
-                           f"Foram inseridos {count} subgrupos.\n==========================================================\n")
-        text_status.configure(state='disabled')
-
-    except FileNotFoundError:
-        messagebox.showerror(title="Falta de dados para o comando",
-                             message="Validar conexão e arquivo selecionados.")
-
-
-def ajustproduto():
-    count = 0
-    cursorbanco = cursor()
-    try:
-        arquivo = text_caminhoarquivo.get()
-        produtos_df = lerexcel(arquivo, 'BASE_PRODUTO')
-
-        for i, codigo in enumerate(produtos_df['CODIGO']):
-            cod_subg = produtos_df.loc[i, 'COD_SUBG']
-            produto = produtos_df.loc[i, 'PRODUTO']
-            script = f'UPDATE PRODUTOS SET SUBG = {cod_subg} WHERE CODIGO = {codigo}'
-            count += 1
-            cursorbanco.execute(script)
-            cursorbanco.commit()
-            text_status.configure(state='normal')
-            text_status.insert('1.0', f'Produto {produto} alterado para subgrupo de codigo {cod_subg}.\n')
-        text_status.insert('1.0',
-                           f'Foram alterados {count} produtos.\n==========================================================\n')
-        text_status.configure(state='disabled')
-
-    except FileNotFoundError:
-        messagebox.showerror(title="Falta de dados para o comando",
-                             message="Validar conexão e arquivo selecionados.")
+def deletardeptos():
+    text_status.configure(state='normal')
+    ConexaoBanco.deletarestrutura(text_status)
+    text_status.configure(state='disabled')
 
 
 window = Tk()
@@ -286,7 +96,7 @@ btn_teste = Button(
     image=img0,
     borderwidth=0,
     highlightthickness=0,
-    command=testarconexao,
+    command=bdconexao,
     relief="flat")
 
 btn_teste.place(
@@ -299,7 +109,7 @@ btn_deletar = Button(
     image=img1,
     borderwidth=0,
     highlightthickness=0,
-    command=deletarestrutura,
+    command=ConexaoBanco.deletarestrutura,
     relief="flat")
 
 btn_deletar.place(
@@ -312,7 +122,7 @@ btn_insertdepto = Button(
     image=img2,
     borderwidth=0,
     highlightthickness=0,
-    command=insertdepto,
+    command=ConexaoBanco.insertdepto,
     relief="flat")
 
 btn_insertdepto.place(
@@ -325,7 +135,7 @@ btn_insertgrup = Button(
     image=img3,
     borderwidth=0,
     highlightthickness=0,
-    command=insertgrupo,
+    command=ConexaoBanco.insertgrupo,
     relief="flat")
 
 btn_insertgrup.place(
@@ -338,7 +148,7 @@ btn_insertsubg = Button(
     image=img4,
     borderwidth=0,
     highlightthickness=0,
-    command=insertsubg,
+    command=ConexaoBanco.insertsubg,
     relief="flat")
 
 btn_insertsubg.place(
@@ -351,7 +161,7 @@ btn_ajusteprod = Button(
     image=img5,
     borderwidth=0,
     highlightthickness=0,
-    command=ajustproduto,
+    command=ConexaoBanco.ajustproduto,
     relief="flat")
 
 btn_ajusteprod.place(
@@ -364,7 +174,7 @@ btn_buscaarquivo = Button(
     image=img6,
     borderwidth=0,
     highlightthickness=0,
-    command=buscararquivo,
+    command=mostrarcaminho,
     relief="flat")
 
 btn_buscaarquivo.place(
