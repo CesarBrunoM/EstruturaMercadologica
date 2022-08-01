@@ -4,12 +4,22 @@ from df_excel import ArquivoExcel
 from conexaoBD import ConexaoBanco
 
 
-def btntestarconexao():
-    '''Criar o cursor para acesso ao banco de dados utilizando os parametros passados pelo usuario.'''
+def conexao():
     banco = text_nomebanco.get()
     server = text_nomeserver.get()
-    con = ConexaoBanco(server, banco)
-    con.testarconexao()
+    bdconexao = ConexaoBanco(server, banco)
+    return bdconexao
+
+
+def dataframeexcel(tabela):
+    arquivo = text_caminhoarquivo.get()
+    dataframe = ArquivoExcel.lerexcel(dirarquivo=arquivo, tabela=f"{tabela}")
+    return dataframe
+
+
+def btntestarconexao():
+    '''Criar o cursor para acesso ao banco de dados utilizando os parametros passados pelo usuario.'''
+    conexao().testarconexao()
 
 
 def btnbuscaarquivo():
@@ -20,22 +30,38 @@ def btnbuscaarquivo():
 
 
 def btndeletarestrutura():
-    banco = text_nomebanco.get()
-    server = text_nomeserver.get()
     text_status.configure(state='normal')
-    ConexaoBanco(server, banco).deletarestrutura(text_status)
+    conexao().deletarestrutura(text_status)
     text_status.insert("1.0",
                        "Processo de exclusão concluido.\n==========================================================\n")
     text_status.configure(state='disabled')
 
 
 def btninserirdepto():
-    banco = text_nomebanco.get()
-    server = text_nomeserver.get()
-    arquivo = text_caminhoarquivo.get()
-    dataframe = ArquivoExcel().lerexcel(arquivo, 'DEPARTAMENTOS')
+    dataframe = dataframeexcel(tabela='DEPARTAMENTOS')
     text_status.configure(state='normal')
-    ConexaoBanco(server, banco).insertdepto(dataframe, codloja=1, textstatus=text_status)
+    conexao().insertdepto(depto_df=dataframe, codloja=1, textstatus=text_status)
+    text_status.configure(state='disabled')
+
+
+def btninserirgrupo():
+    dataframe = dataframeexcel(tabela='GRUPOS')
+    text_status.configure(state='normal')
+    conexao().insertgrupo(grupo_df=dataframe, codloja=1, textstatus=text_status)
+    text_status.configure(state='disabled')
+
+
+def btninserirsubg():
+    dataframe = dataframeexcel(tabela='SUB_GRUPOS')
+    text_status.configure(state='normal')
+    conexao().insertsubg(dataframe, codloja=1, textstatus=text_status)
+    text_status.configure(state='disabled')
+
+
+def ajusteproduto():
+    df_produto = dataframeexcel(tabela='BASE_PRODUTO')
+    text_status.configure(state='normal')
+    conexao().ajustproduto(df_produto, text_status)
     text_status.configure(state='disabled')
 
 
@@ -148,7 +174,7 @@ btn_insertgrup = Button(
     image=img3,
     borderwidth=0,
     highlightthickness=0,
-    command=ConexaoBanco.insertgrupo,
+    command=btninserirgrupo,
     relief="flat")
 
 btn_insertgrup.place(
@@ -161,7 +187,7 @@ btn_insertsubg = Button(
     image=img4,
     borderwidth=0,
     highlightthickness=0,
-    command=ConexaoBanco.insertsubg,
+    command=btninserirsubg,
     relief="flat")
 
 btn_insertsubg.place(
@@ -174,7 +200,7 @@ btn_ajusteprod = Button(
     image=img5,
     borderwidth=0,
     highlightthickness=0,
-    command=ConexaoBanco.ajustproduto,
+    command=ajusteproduto,
     relief="flat")
 
 btn_ajusteprod.place(

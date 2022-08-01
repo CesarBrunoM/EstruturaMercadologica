@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 class ConexaoBanco(object):
     _banco = None
+    count = 0
 
     def __init__(self, nomeserver, bancodados):
         nomeserver = nomeserver.strip()
@@ -76,9 +77,6 @@ class ConexaoBanco(object):
                                   f'\n==========================================================\n')
 
     def insertdepto(self, depto_df, codloja, textstatus):
-        '''Realiza a leitura do arquivo excel buscando a aba DEPTO,
-        apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-        count = 0
         scriptdepto = '''Insert into DEPTO (CODIGO, NOME, DATA,CODLOJA, SEQUENCIA) VALUES ('''
         consulta = self.consultaqtddados('DEPTO')
 
@@ -90,27 +88,22 @@ class ConexaoBanco(object):
                     codigo) + ', \'' + depto + '\'' + ',' + ' GETDATE() ' + f' ,{codloja} ' + ' ,' + str(
                     codigo) + ')'
                 script = scriptdepto + df_dados
-                count += 1
+                self.count += 1
                 self.manipularbd(script)
                 textstatus.insert("1.0", f"Departamento {depto} inserido com sucesso.\n")
 
             textstatus.insert("1.0",
-                              f"Foram inseridos {count} departamentos."
+                              f"Foram inseridos {self.count} departamentos."
                               f"\n==========================================================\n")
-        elif consulta > 0:
+        else:
             messagebox.showwarning(title="Aviso",
                                    message=f"Necessário excluir os dados antes da inserção de valores.")
 
-    def insertgrupo():
-        '''Realiza a leitura do arquivo excel buscando a aba GRUPO,
-        apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-        count = 0
-        cursorbanco = cursor()
+    def insertgrupo(self, grupo_df, codloja, textstatus):
+        scriptgrupo = '''Insert into GRUPOS (CODIGO, NOME, CODDEP, DATA, CODLOJA, SEQUENCIA) VALUES ('''
+        consulta = self.consultaqtddados('GRUPOS')
 
-        try:
-            arquivo = text_caminhoarquivo.get()
-            grupo_df = lerexcel(arquivo, 'GRUPOS')
-
+        if consulta == 0:
             for i, codigo in enumerate(grupo_df['CODIGO']):
                 grupo = grupo_df.loc[i, 'GRUPO'].replace("'", "").strip().upper()
                 coddep = grupo_df.loc[i, 'COD_DEPARTAMENTO']
@@ -118,32 +111,29 @@ class ConexaoBanco(object):
                 datagrup = str(codigo) + ', \'' + grupo + '\', ' + str(
                     coddep) + ', GETDATE(), ' + f' {codloja}, ' + str(
                     codigo) + ')'
-                query = scriptGrupo + datagrup
-                count += 1
-                cursorbanco.execute(query)
-                cursorbanco.commit()
-                text_status.configure(state='normal')
-                text_status.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
+                script = scriptgrupo + datagrup
+                self.manipularbd(script)
+                self.count += 1
 
-            text_status.insert("1.0",
-                               f"Foram inseridos {count} grupos."
-                               f"\n==========================================================\n")
-            text_status.configure(state='disabled')
+                textstatus.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
 
-        except FileNotFoundError:
-            messagebox.showerror(title="Falta de dados para o comando",
-                                 message="Validar conexão e arquivo selecionados.")
+            textstatus.insert("1.0",
+                              f"Foram inseridos {self.count} grupos."
+                              f"\n==========================================================\n")
+        else:
+            messagebox.showwarning(title="Aviso",
+                                   message=f"Necessário excluir os dados antes da inserção de valores.")
 
-    def insertsubg():
+    def insertsubg(self, subg_df, codloja, textstatus):
         '''Realiza a leitura do arquivo excel buscando a aba SUBG,
         apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-        count = 0
-        cursorbanco = cursor()
 
-        try:
-            arquivo = text_caminhoarquivo.get()
-            subg_df = lerexcel(arquivo, 'SUB_GRUPOS')
+        self.count = 0
+        scriptSubg = '''Insert into SUB_GRUPOS (CODIGO, CODLOJA, NOME, CODGRU, DATA, SEQUENCIA) VALUES ('''
 
+        consulta = self.consultaqtddados('SUB_GRUPOS')
+
+        if consulta == 0:
             for i, codigo in enumerate(subg_df['CODIGO']):
                 subgrupo = subg_df.loc[i, 'SUBGRUPO'].replace("'", "").strip().upper()
                 codgrup = subg_df.loc[i, 'COD_GRUPO']
@@ -153,44 +143,23 @@ class ConexaoBanco(object):
                     codigo) + ')'
 
                 query = scriptSubg + datasubg
-                count += 1
-                cursorbanco.execute(query)
-                cursorbanco.commit()
-                text_status.configure(state='normal')
-                text_status.insert("1.0", f"SubGrupo {subgrupo} inserindo com sucesso.\n")
+                self.count += 1
+                self.manipularbd(query)
 
-            text_status.insert("1.0",
-                               f"Foram inseridos {count} subgrupos.\n==========================================================\n")
-            text_status.configure(state='disabled')
+                textstatus.insert("1.0", f"Grupo {subgrupo} inserido com sucesso.\n")
+            textstatus.insert("1.0",
+                              f"Foram inseridos {self.count} subgrupos.\n==========================================================\n")
+        else:
+            messagebox.showwarning(title="Aviso",
+                                   message=f"Necessário excluir os dados antes da inserção de valores.")
 
-        except FileNotFoundError:
-            messagebox.showerror(title="Falta de dados para o comando",
-                                 message="Validar conexão e arquivo selecionados.")
-
-    def ajustproduto():
-        count = 0
-        cursorbanco = cursor()
-        try:
-            arquivo = text_caminhoarquivo.get()
-            produtos_df = lerexcel(arquivo, 'BASE_PRODUTO')
-
-            for i, codigo in enumerate(produtos_df['CODIGO']):
-                cod_subg = produtos_df.loc[i, 'COD_SUBG']
-                produto = produtos_df.loc[i, 'PRODUTO']
-                script = f'UPDATE PRODUTOS SET SUBG = {cod_subg} WHERE CODIGO = {codigo}'
-                count += 1
-                cursorbanco.execute(script)
-                cursorbanco.commit()
-                text_status.configure(state='normal')
-                text_status.insert('1.0', f'Produto {produto} alterado para subgrupo de codigo {cod_subg}.\n')
-            text_status.insert('1.0',
-                               f'Foram alterados {count} produtos.\n==========================================================\n')
-            text_status.configure(state='disabled')
-
-        except FileNotFoundError:
-            messagebox.showerror(title="Falta de dados para o comando",
-                                 message="Validar conexão e arquivo selecionados.")
-
-
-scriptGrupo = '''Insert into GRUPOS (CODIGO, NOME, CODDEP, DATA, CODLOJA, SEQUENCIA) VALUES ('''
-scriptSubg = '''Insert into SUB_GRUPOS (CODIGO, CODLOJA, NOME, CODGRU, DATA, SEQUENCIA) VALUES ('''
+    def ajustproduto(self, produtos_df, textstatus):
+        for i, codigo in enumerate(produtos_df['CODIGO']):
+            cod_subg = produtos_df.loc[i, 'COD_SUBG']
+            produto = produtos_df.loc[i, 'PRODUTO']
+            script = f'UPDATE PRODUTOS SET SUBG = {cod_subg} WHERE CODIGO = {codigo}'
+            self.count += 1
+            self.manipularbd(script)
+            textstatus.insert('1.0', f'Produto {produto} alterado para subgrupo de codigo {cod_subg}.\n')
+        textstatus.insert('1.0',
+                          f'Foram alterados {self.count} produtos.\n==========================================================\n')

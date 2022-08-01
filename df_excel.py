@@ -3,18 +3,19 @@ from tkinter import filedialog
 
 
 class ArquivoExcel(object):
-    def buscararquivo(self, text_caminhoarquivo):
+
+    def buscararquivo(self, textdir):
         '''Busca o arquivo excel no sistema.
         filetypes=(("Arquivo csv", ".csv"), ("Arquivo xlsx", ".xlsx"), ("Arquivo xls", ".xls"))'''
-        planilha = filedialog.askopenfile(mode='r', title="Selecione o arquivo com a departamentalização",
-                                          filetypes=(
-                                              ("Arquivo xlsx", ".xlsx"), ("Arquivo xls", ".xls")))
+        self.planilha = filedialog.askopenfile(mode='r', title="Selecione o arquivo com a departamentalização",
+                                               filetypes=(
+                                                   ("Arquivo xlsx", ".xlsx"), ("Arquivo xls", ".xls")))
 
-        caminho = getattr(planilha, "name")
+        caminho = getattr(self.planilha, "name")
 
-        text_caminhoarquivo.insert(0, caminho)
+        textdir.insert(0, caminho)
 
-    def lerexcel(self, dirarquivo, aba):
-        df_excel = pd.read_excel(r'{}'.format(dirarquivo), sheet_name=f"{aba}")
+    def lerexcel(dirarquivo, tabela):
+        df_excel = pd.read_excel(r'{}'.format(dirarquivo), sheet_name=f"{tabela}")
 
         return df_excel
