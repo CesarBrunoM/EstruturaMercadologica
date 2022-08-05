@@ -10,13 +10,11 @@ class ConexaoBanco(object):
     def __init__(self, nomeserver, bancodados):
         nomeserver = nomeserver.strip()
         bancodados = bancodados.strip()
-
         self._banco = pyodbc.connect(
             "Driver={SQL Server};"
             f"Server={nomeserver};"
             f"Database={bancodados};"
-            "UID=SA;"
-            "PWD=usuarioteste;")
+        )
 
     def manipularbd(self, scriptsql):
         try:

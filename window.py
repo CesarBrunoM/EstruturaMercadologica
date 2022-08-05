@@ -7,8 +7,11 @@ from conexaoBD import ConexaoBanco
 def conexao():
     banco = text_nomebanco.get()
     server = text_nomeserver.get()
-    bdconexao = ConexaoBanco(server, banco)
-    return bdconexao
+    try:
+        bdconexao = ConexaoBanco(server, banco)
+        return bdconexao
+    except:
+        messagebox.showerror(title="Erro de conexão", message="Falha na conexão com o banco de dados")
 
 
 def dataframeexcel(tabela):
@@ -19,7 +22,11 @@ def dataframeexcel(tabela):
 
 def btntestarconexao():
     '''Criar o cursor para acesso ao banco de dados utilizando os parametros passados pelo usuario.'''
-    conexao().testarconexao()
+    try:
+        conexao().testarconexao()
+    except AttributeError:
+        messagebox.showerror(title="Falha", message="Teste de conexão")
+        raise AttributeError('Verifique os dados de conexão com o banco de dados.')
 
 
 def btnbuscaarquivo():
