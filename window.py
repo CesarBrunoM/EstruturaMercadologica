@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox, scrolledtext
 from df_excel import ArquivoExcel
 from conexaoBD import ConexaoBanco
+import pandas as pd
 
 
 def conexao():
@@ -16,7 +17,7 @@ def conexao():
 
 def dataframeexcel(tabela):
     arquivo = text_caminhoarquivo.get()
-    dataframe = ArquivoExcel.lerexcel(dirarquivo=arquivo, tabela=f"{tabela}")
+    dataframe = pd.read_excel(r'{}'.format(arquivo), sheet_name=f"{tabela}")
     return dataframe
 
 
@@ -73,7 +74,7 @@ def btninserirgrupo():
         try:
             conexao().insertgrupo(grupo_df=dataframe, codloja=1, textstatus=text_status)
         except:
-            messagebox.showerror(title="Falha de conexão",  message="Verifique seu acesso ao banco de dados.")
+            messagebox.showerror(title="Falha de conexão", message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
 
 
@@ -89,7 +90,6 @@ def btninserirsubg():
         except:
             messagebox.showerror(title="Falha de conexão", message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
-
 
 
 def ajusteproduto():

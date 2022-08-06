@@ -1,4 +1,3 @@
-import pandas as pd
 from tkinter import filedialog
 
 
@@ -14,8 +13,3 @@ class ArquivoExcel(object):
         caminho = getattr(self.planilha, "name")
 
         textdir.insert(0, caminho)
-
-    def lerexcel(dirarquivo, tabela):
-        df_excel = pd.read_excel(r'{}'.format(dirarquivo), sheet_name=f"{tabela}")
-
-        return df_excel
