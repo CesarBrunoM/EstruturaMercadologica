@@ -25,8 +25,8 @@ def btntestarconexao():
     try:
         conexao().testarconexao()
     except AttributeError:
-        messagebox.showerror(title="Falha", message="Teste de conexão")
-        raise AttributeError('Verifique os dados de conexão com o banco de dados.')
+        messagebox.showerror(title="Falha",
+                             message="Não foi possivel realizar o teste.\nRevise os dados de conexão.")
 
 
 def btnbuscaarquivo():
@@ -38,37 +38,71 @@ def btnbuscaarquivo():
 
 def btndeletarestrutura():
     text_status.configure(state='normal')
-    conexao().deletarestrutura(text_status)
-    text_status.insert("1.0",
-                       "Processo de exclusão concluido.\n==========================================================\n")
+    try:
+        conexao().deletarestrutura(text_status)
+        text_status.insert("1.0",
+                           "Processo de exclusão concluido.\n==========================================================\n")
+    except:
+        messagebox.showerror(title="Falha ao deletar os dados",
+                             message="Não foi possivel encontrar os dados para exclusão.\nVerifique seu acesso ao banco.")
     text_status.configure(state='disabled')
 
 
 def btninserirdepto():
-    dataframe = dataframeexcel(tabela='DEPARTAMENTOS')
-    text_status.configure(state='normal')
-    conexao().insertdepto(depto_df=dataframe, codloja=1, textstatus=text_status)
+    try:
+        dataframe = dataframeexcel(tabela='DEPARTAMENTOS')
+        text_status.configure(state='normal')
+    except FileNotFoundError:
+        messagebox.showerror(title='Falha ao ler arquivo', message='Arquivo excel não foi encontrado.')
+    else:
+        try:
+            conexao().insertdepto(depto_df=dataframe, codloja=1, textstatus=text_status)
+        except:
+            messagebox.showerror(title="Falha de conexão",
+                                 message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
 
 
 def btninserirgrupo():
-    dataframe = dataframeexcel(tabela='GRUPOS')
-    text_status.configure(state='normal')
-    conexao().insertgrupo(grupo_df=dataframe, codloja=1, textstatus=text_status)
+    try:
+        dataframe = dataframeexcel(tabela='GRUPOS')
+        text_status.configure(state='normal')
+    except FileNotFoundError:
+        messagebox.showerror(title='Falha ao ler arquivo', message='Arquivo excel não foi encontrado.')
+    else:
+        try:
+            conexao().insertgrupo(grupo_df=dataframe, codloja=1, textstatus=text_status)
+        except:
+            messagebox.showerror(title="Falha de conexão",  message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
 
 
 def btninserirsubg():
-    dataframe = dataframeexcel(tabela='SUB_GRUPOS')
-    text_status.configure(state='normal')
-    conexao().insertsubg(dataframe, codloja=1, textstatus=text_status)
+    try:
+        dataframe = dataframeexcel(tabela='SUB_GRUPOS')
+        text_status.configure(state='normal')
+    except FileNotFoundError:
+        messagebox.showerror(title='Falha ao ler arquivo', message='Arquivo excel não foi encontrado.')
+    else:
+        try:
+            conexao().insertsubg(subg_df=dataframe, codloja=1, textstatus=text_status)
+        except:
+            messagebox.showerror(title="Falha de conexão", message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
 
 
+
 def ajusteproduto():
-    df_produto = dataframeexcel(tabela='BASE_PRODUTO')
-    text_status.configure(state='normal')
-    conexao().ajustproduto(df_produto, text_status)
+    try:
+        df_produto = dataframeexcel(tabela='BASE_PRODUTO')
+        text_status.configure(state='normal')
+    except FileNotFoundError:
+        messagebox.showerror(title='Falha ao ler arquivo', message='Arquivo excel não foi encontrado.')
+    else:
+        try:
+            conexao().ajustproduto(df_produto, text_status)
+        except:
+            messagebox.showerror(title="Falha de conexão", message="Verifique seu acesso ao banco de dados.")
     text_status.configure(state='disabled')
 
 

@@ -57,7 +57,7 @@ class ConexaoBanco(object):
 
     def deletarestrutura(self, textstatus):
         '''Deleta as tabelas de departamentos, grupos e subgrupos do banco de dados'''
-        nometabela = ['SUB_GRUPOS', 'GRUPOS', 'DEPTO']
+        nometabela = ['SUB_GRUPOS', 'GRUPOS', 'DEPTO', 'COMISSAO_DEPTO_LOJA']
         script = f'DELETE FROM '
         for nome in nometabela:
             qtd = self.consultaqtddados(nome)
@@ -76,6 +76,7 @@ class ConexaoBanco(object):
 
     def insertdepto(self, depto_df, codloja, textstatus):
         scriptdepto = '''Insert into DEPTO (CODIGO, NOME, DATA,CODLOJA, SEQUENCIA) VALUES ('''
+        scriptcomiss = 'INSERT INTO COMISSAO_DEPTO_LOJA SELECT CODIGO, CODLOJA, 0, 0, 0  FROM DEPTO'
         consulta = self.consultaqtddados('DEPTO')
 
         if consulta == 0:
@@ -93,6 +94,8 @@ class ConexaoBanco(object):
             textstatus.insert("1.0",
                               f"Foram inseridos {self.count} departamentos."
                               f"\n==========================================================\n")
+            self.manipularbd(scriptcomiss)
+            messagebox.showinfo(title="Secesso", message="Todos os departamentos foram inseridos.")
         else:
             messagebox.showwarning(title="Aviso",
                                    message=f"Necessário excluir os dados antes da inserção de valores.")
@@ -100,56 +103,63 @@ class ConexaoBanco(object):
     def insertgrupo(self, grupo_df, codloja, textstatus):
         scriptgrupo = '''Insert into GRUPOS (CODIGO, NOME, CODDEP, DATA, CODLOJA, SEQUENCIA) VALUES ('''
         consulta = self.consultaqtddados('GRUPOS')
+        depto = self.consultaqtddados('DEPTO')
 
-        if consulta == 0:
-            for i, codigo in enumerate(grupo_df['CODIGO']):
-                grupo = grupo_df.loc[i, 'GRUPO'].replace("'", "").strip().upper()
-                coddep = grupo_df.loc[i, 'COD_DEPARTAMENTO']
+        if depto > 0:
+            if consulta == 0:
+                for i, codigo in enumerate(grupo_df['CODIGO']):
+                    grupo = grupo_df.loc[i, 'GRUPO'].replace("'", "").strip().upper()
+                    coddep = grupo_df.loc[i, 'COD_DEPARTAMENTO']
 
-                datagrup = str(codigo) + ', \'' + grupo + '\', ' + str(
-                    coddep) + ', GETDATE(), ' + f' {codloja}, ' + str(
-                    codigo) + ')'
-                script = scriptgrupo + datagrup
-                self.manipularbd(script)
-                self.count += 1
+                    datagrup = str(codigo) + ', \'' + grupo + '\', ' + str(
+                        coddep) + ', GETDATE(), ' + f' {codloja}, ' + str(
+                        codigo) + ')'
+                    script = scriptgrupo + datagrup
+                    self.manipularbd(script)
+                    self.count += 1
 
-                textstatus.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
-
-            textstatus.insert("1.0",
-                              f"Foram inseridos {self.count} grupos."
-                              f"\n==========================================================\n")
+                    textstatus.insert("1.0", f"Grupo {grupo} inserido com sucesso.\n")
+                messagebox.showinfo(title="Secesso", message="Todos os Grupos foram inseridos.")
+                textstatus.insert("1.0",
+                                  f"Foram inseridos {self.count} grupos."
+                                  f"\n==========================================================\n")
+            else:
+                messagebox.showwarning(title="Aviso",
+                                       message=f"Necessário excluir os dados antes da inserção de valores.")
         else:
-            messagebox.showwarning(title="Aviso",
-                                   message=f"Necessário excluir os dados antes da inserção de valores.")
+            messagebox.showwarning(title='Dados necessários',
+                                   message="Deve ser inserido DEPARTAMENTOS antes dos GRUPOS.")
 
     def insertsubg(self, subg_df, codloja, textstatus):
-        '''Realiza a leitura do arquivo excel buscando a aba SUBG,
-        apos faz o tratamento dos dados e insere as informações no banco de dados.'''
-
         self.count = 0
-        scriptSubg = '''Insert into SUB_GRUPOS (CODIGO, CODLOJA, NOME, CODGRU, DATA, SEQUENCIA) VALUES ('''
-
+        scriptsubg = '''Insert into SUB_GRUPOS (CODIGO, CODLOJA, NOME, CODGRU, DATA, SEQUENCIA) VALUES ('''
         consulta = self.consultaqtddados('SUB_GRUPOS')
+        grupo = self.consultaqtddados('GRUPOS')
 
-        if consulta == 0:
-            for i, codigo in enumerate(subg_df['CODIGO']):
-                subgrupo = subg_df.loc[i, 'SUBGRUPO'].replace("'", "").strip().upper()
-                codgrup = subg_df.loc[i, 'COD_GRUPO']
+        if grupo > 0:
+            if consulta == 0:
+                for i, codigo in enumerate(subg_df['CODIGO']):
+                    subgrupo = subg_df.loc[i, 'SUBGRUPO'].replace("'", "").strip().upper()
+                    codgrup = subg_df.loc[i, 'COD_GRUPO']
 
-                datasubg = str(codigo) + f', {codloja}, ' + '\'' + subgrupo + '\', ' + str(
-                    codgrup) + ', ' + ' GETDATE(), ' + str(
-                    codigo) + ')'
+                    datasubg = str(codigo) + f', {codloja}, ' + '\'' + subgrupo + '\', ' + str(
+                        codgrup) + ', ' + ' GETDATE(), ' + str(
+                        codigo) + ')'
 
-                query = scriptSubg + datasubg
-                self.count += 1
-                self.manipularbd(query)
+                    query = scriptsubg + datasubg
+                    self.count += 1
+                    self.manipularbd(query)
 
-                textstatus.insert("1.0", f"Grupo {subgrupo} inserido com sucesso.\n")
-            textstatus.insert("1.0",
-                              f"Foram inseridos {self.count} subgrupos.\n==========================================================\n")
+                    textstatus.insert("1.0", f"Grupo {subgrupo} inserido com sucesso.\n")
+                messagebox.showinfo(title="Secesso", message="Todos os Sub Grupos foram inseridos.")
+                textstatus.insert("1.0",
+                                  f"Foram inseridos {self.count} subgrupos.\n==========================================================\n")
+            else:
+                messagebox.showwarning(title="Aviso",
+                                       message=f"Necessário excluir os dados antes da inserção de valores.")
         else:
-            messagebox.showwarning(title="Aviso",
-                                   message=f"Necessário excluir os dados antes da inserção de valores.")
+            messagebox.showwarning(title='Dados necessários',
+                                   message="Deve ser inserido GRUPOS antes dos SUB_GRUPOS.")
 
     def ajustproduto(self, produtos_df, textstatus):
         for i, codigo in enumerate(produtos_df['CODIGO']):
